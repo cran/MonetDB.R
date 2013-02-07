@@ -1,0 +1,42 @@
+import(DBI)
+
+# export only driver constructor, everything else is DBI stuff..
+export(MonetDB,MonetR,MonetDBR,MonetDB.R)
+export(monet.read.csv,monetdb.read.csv)
+# this one is not in the DBI
+exportMethods(dbSendUpdate,dbSendUpdateAsync)
+export(monetdbGetTransferredBytes)
+export(monetdbRtype)
+
+# monet.frame things, this is an S3 class
+export(monet.frame)
+S3method(as.data.frame,monet.frame)
+S3method(as.vector,monet.frame)
+
+S3method("[",monet.frame)
+S3method("$",monet.frame)
+S3method(str,monet.frame)
+S3method(print,monet.frame)
+S3method(names,monet.frame)
+S3method(dim,monet.frame)
+S3method(subset,monet.frame)
+S3method(Ops,monet.frame)
+S3method(Summary,monet.frame)
+S3method(Math,monet.frame)
+S3method(mean,monet.frame)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

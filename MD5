@@ -1,0 +1,17 @@
+64a8401dc3426a30ac547c5b2aae5a95 *DESCRIPTION
+5630a4537c6992c5b04700ea523c7aa9 *NAMESPACE
+3f666bbc99c1d8c4878f31f86c9b608e *NEWS
+6d7f88fdb4655be7c13f25cda6ca3349 *R/monetdb.R
+9b857f0b3417e1f2f4159c54b83569ff *R/monetframe.R
+9e20bbae977c72dbb056e3b4fb7a82bf *db.tests/experiments/compare.R
+98106840d59f2953defda2dfdb50d16b *db.tests/experiments/survey.R
+28f6dd4bb10c5a3a8641b01b541a5ad1 *db.tests/monetdb.test.R
+6a1db011f9e5d03d251eab83666944f5 *db.tests/monetframe.test.R
+92c5bd8e480c02a701264214e869fbb4 *db.tests/sqlsurvey.test.R
+0199d7dcdc3c2368f95b3faa86f3e2ac *man/MonetDB.R.Rd
+7cbba9254878585a7446f77612795fbd *man/as.data.frame.Rd
+46cc19ae2cdb0e10166ca93bb4af2e0c *man/dbSendUpdate.Rd
+ae0f789468638974708d84966e794995 *man/monet.frame.Rd
+4dea797f8a7212546f94c9e2e5b6c41d *man/monetdb.read.csv.Rd
+ec08a3bf0d91f836ffcd4342a1634557 *man/monetdbGetTransferredBytes.Rd
+8c9828a24ea1bc117a8f4986412c4917 *man/monetdbRtype.Rd
