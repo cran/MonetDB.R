@@ -25,7 +25,7 @@ MonetR <- MonetDB <- MonetDBR <- MonetDB.R <- function() {
 
 setMethod("dbGetInfo", "MonetDBDriver", def=function(dbObj, ...)
 			list(name="MonetDBDriver", 
-					driver.version="0.9",
+					driver.version="0.9.1",
 					DBI.version="0.2-5",
 					client.version=NA,
 					max.connections=NA)
@@ -95,20 +95,28 @@ setMethod("dbConnect", "MonetDBDriver", def=function(drv,dbname="demo", user="mo
 			# make new socket with user-specified timeout
 			#socket <- socket <<- socketConnection(host = host, port = port, 
 			#	blocking = TRUE, open="r+b",timeout = timeout) 
-			socket <- socket <<- .Call("mapiConnect",host,port,timeout,PACKAGE=C_LIBRARY)
+			socket <- .Call("mapiConnect",host,port,timeout,PACKAGE=C_LIBRARY)
 			.monetAuthenticate(socket,dbname,user,password,language=language)
 			connenv <- new.env(parent=emptyenv())
 			connenv$lock <- 0
 			connenv$deferred <- list()
 			connenv$exception <- list()
-			
-			return(new("MonetDBConnection",socket=socket,connenv=connenv))
+
+			return(new("MonetDBConnection",socket=socket,connenv=connenv,Id=-1L))
 		},
 		valueClass="MonetDBConnection")
 
 
 ### MonetDBConnection, #monetdb_mapi_conn
-setClass("MonetDBConnection", representation("DBIConnection",socket="externalptr",connenv="environment",fetchSize="integer"))
+setClass("MonetDBConnection", representation("DBIConnection",socket="externalptr",connenv="environment",fetchSize="integer",Id="integer"))
+
+setMethod("dbGetInfo", "MonetDBConnection", def=function(dbObj, ...) {
+			envdata <- dbGetQuery(dbObj,"SELECT name, value from env()")
+			ll <- as.list(envdata$value)
+			names(ll) <- envdata$name
+			ll$name <- "MonetDBConnection"
+			return(ll)
+		})
 
 setMethod("dbDisconnect", "MonetDBConnection", def=function(conn, ...) {
 			.Call("mapiDisconnect",conn@socket,PACKAGE=C_LIBRARY)
@@ -120,6 +128,22 @@ setMethod("dbListTables", "MonetDBConnection", def=function(conn, ...) {
 			df$name
 		})
 
+if (is.null(getGeneric("dbTransaction"))) setGeneric("dbTransaction", function(conn,...) standardGeneric("dbTransaction"))
+setMethod("dbTransaction", signature(conn="MonetDBConnection"),  def=function(conn, ...) {
+      dbSendQuery(conn,"start transaction")
+      invisible(TRUE)
+    })
+
+setMethod("dbCommit", "MonetDBConnection", def=function(conn, ...) {
+			dbSendQuery(conn,"commit")
+			invisible(TRUE)
+		})
+
+setMethod("dbRollback", "MonetDBConnection", def=function(conn, ...) {
+			dbSendQuery(conn,"rollback")
+			invisible(TRUE)
+		})
+
 setMethod("dbListFields", "MonetDBConnection", def=function(conn, name, ...) {
 			if (!dbExistsTable(conn,name))
 				stop(paste0("Unknown table: ",name));
@@ -128,14 +152,12 @@ setMethod("dbListFields", "MonetDBConnection", def=function(conn, name, ...) {
 		})
 
 setMethod("dbExistsTable", "MonetDBConnection", def=function(conn, name, ...) {
-			tolower(name) %in% dbListTables(conn)
+			tolower(name) %in% tolower(dbListTables(conn))
 		})
-
 
 setMethod("dbGetException", "MonetDBConnection", def=function(conn, ...) {
 			conn@connenv$exception
 		})
-
 
 setMethod("dbReadTable", "MonetDBConnection", def=function(conn, name, ...) {
 			if (!dbExistsTable(conn,name))
@@ -156,10 +178,6 @@ setMethod("dbSendQuery", signature(conn="MonetDBConnection", statement="characte
 				if (length(list(...))) statement <- .bindParameters(statement, list(...))
 				if (!is.null(list)) statement <- .bindParameters(statement, list)
 			}	
-
-# removeme
-#write(statement,file="/export/scratch2/hannes/anthony-joinbug/log.sql",append=TRUE)
-
 			conn@connenv$exception <- list()
 			env <- NULL
 			if (DEBUG_QUERY)  cat(paste("QQ: '",statement,"'\n",sep=""))
@@ -243,7 +261,6 @@ setMethod("dbWriteTable", "MonetDBConnection", def=function(conn, name, value, o
 			}
 			return(invisible(TRUE))
 		})
-
 
 setMethod("dbDataType", signature(dbObj="MonetDBConnection", obj = "ANY"), def = function(dbObj, obj, ...) {
 			if (is.logical(obj)) "BOOLEAN"
@@ -458,8 +475,11 @@ setMethod("fetch", signature(res="MonetDBResult", n="numeric"), def=function(res
 
 
 setMethod("dbClearResult", "MonetDBResult",	def = function(res, ...) {
-			.mapiRequest(res@env$conn,paste0("Xclose ",res@env$info$id),async=TRUE)
-			TRUE	
+			resid <- res@env$info$id
+			if (!is.null(resid) && !is.na(resid) && is.numeric(resid)) {
+				.mapiRequest(res@env$conn,paste0("Xclose ",resid),async=TRUE)
+			}
+			invisible(TRUE)
 		},valueClass = "logical")
 
 setMethod("dbHasCompleted", "MonetDBResult", def = function(res, ...) {
@@ -507,8 +527,6 @@ Q_CREATE      <- 3
 Q_TRANSACTION <- 4
 Q_PREPARE     <- 5
 Q_BLOCK       <- 6
-
-
 
 
 REPLY_SIZE    <- 100 # Apparently, -1 means unlimited, but we will start with a small result set. 

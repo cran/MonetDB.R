@@ -1,11 +1,12 @@
-a64bddb74d15baea35b1b8b5db86dc33 *DESCRIPTION
-578cfca85dc43952cf54becd72859554 *NAMESPACE
-2ed7446ed7c53dcc447455b161283586 *NEWS
-4e2290af24dbe52a9997e2d19ae44a34 *R/control.R
-917c6bdc6c345c6813b643718efd658c *R/monetdb.R
+63b5578e1802d5f0e3447aa5ac50f11a *DESCRIPTION
+9b7781376e2fb1ca3657f74b8f5aeaa1 *NAMESPACE
+e87b9cf27abcaba4e79a727bd868b1b1 *NEWS
+5210ce7b12f08e7c866331c782816c76 *R/control.R
+7089e5ab3aff67fec9563ff22a033657 *R/monetdb.R
 c387d4550922821f6ab0a07be1c10bd6 *man/MonetDB.R.Rd
 ca44dd262e75bdf1299ac2a343487a84 *man/control.Rd
 46cc19ae2cdb0e10166ca93bb4af2e0c *man/dbSendUpdate.Rd
+6fdd2a2fe22b39129365e5f79612c2df *man/dbTransaction.Rd
 e3c03acc162ecb80f472f6aa39e77b61 *man/mc.Rd
 8c6718751a84322a84e467884445a55f *man/monetdb.read.csv.Rd
 ec08a3bf0d91f836ffcd4342a1634557 *man/monetdbGetTransferredBytes.Rd
