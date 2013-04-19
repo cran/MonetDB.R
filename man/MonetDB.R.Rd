@@ -19,7 +19,7 @@
   \code{\link[DBI]{dbConnect}}.
 }
 \details{
-  The \code{RMonetDB} function creates the R object which can be used to a
+  The \code{MonetDB.R} function creates the R object which can be used to a
   call \code{\link[DBI]{dbConnect}} which actually creates the connection. 
   Since it has no parameters, it is most commonly used inline with the \code{\link[DBI]{dbConnect}} call.
  
@@ -29,7 +29,11 @@
   \code{\link{monetdb.read.csv}} for database CSV import.
 }
 \seealso{
-  \code{\link[DBI]{dbConnect}}
+  \code{\link[DBI]{dbConnect}} for documentation how to invoke the driver
+  
+  \code{\link[MonetDB.R]{monet.frame}} for a \code{data.frame()}-like interface to the DB  
+  
+  \code{\link[=control]{monetdb.server.setup}} to set up and start a local MonetDB server from R
 }
 \examples{
 \dontrun{
@@ -37,7 +41,7 @@ conn <- dbConnect(MonetDB.R(), "monetdb://localhost/demo")
 dbListTables(conn)
 data(iris)
 dbWriteTable(conn, "iris", iris)
-dbGetQuery(conn, "select count(*) from iris")
+dbGetQuery(conn, "SELECT COUNT(*) FROM iris;")
 d <- dbReadTable(conn, "iris")
 
 }}

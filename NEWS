@@ -1,3 +1,42 @@
+0.6
+- merge() support from Anthony
+- CRAN cleanup
+- MonetDB control code for UNIX-like systems
+
+0.5.16
+- bugfixes in monet.frame
+
+0.5.15
+- rbind() support on monet.frame from Anthony
+
+0.5.14
+- sample() support on monet.frame
+
+0.5.13
+- bugfix in server control code from Anthony
+
+0.5.12
+- integrated formula-based aggregation from Anthony
+
+0.5.11
+- fixed a bug in aggregate() to allow count-aggregation on non-numeric columns
+
+0.5.10
+- MonetDB server control code (Windows) from Anthony Damico
+
+0.5.9
+- Increased default socket timeout to 24h. Rationale: Import jobs may take this long, and all operations can always be cancelled with CTRL-C
+
+0.5.8
+- aggregate() support in DB
+
+0.5.5
+- Column name, type and dimension hints for monet.frame, makes it faster
+
+0.5.4
+- Initial support for sort(), head(), tail(), summary(), var(), sd(), quantile() and median() in monet.frame
+- Changed str() implementation to not show sample data but column names/types instead
+
 0.5
 - first release aimed at CRAN publication
 - monet.frame virtual data object

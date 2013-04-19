@@ -2,7 +2,7 @@ require(DBI)
 require(bitops)
 require(digest)
 
-# TODO: make these values configuratble in the call to dbConnect
+# TODO: make these values configurable in the call to dbConnect
 DEBUG_IO      <- FALSE
 DEBUG_QUERY   <- FALSE
 
@@ -25,7 +25,7 @@ setMethod("dbGetInfo", "MonetDBDriver", def=function(dbObj, ...)
 					max.connections=NA)
 )
 
-setMethod("dbConnect", "MonetDBDriver", def=function(drv, url, user="monetdb", password="monetdb",timeout=1000, ...) {
+setMethod("dbConnect", "MonetDBDriver", def=function(drv, url, user="monetdb", password="monetdb",timeout=86400, ...) {
 	if (substring(url,1,10) != "monetdb://") {
 		stop(paste("Only monetdb:// DBs supported."))
 	}	
@@ -49,8 +49,43 @@ setMethod("dbConnect", "MonetDBDriver", def=function(drv, url, user="monetdb", p
 	
 	cat(paste0("II: Connecting to MonetDB on host ",host," at port ",port, " to DB ", dbname, " with user ", user," and a non-printed password, timeout is ",timeout," seconds.\n"))
 			
-	con <- socketConnection(host = host, port = port, blocking = TRUE, open="r+b",timeout=timeout)
+	
+		
+	# initiate a starting timer
+	start.timer <- Sys.time()
+	# and initiate an error, so the while loop runs at least once.
+	con.success <- try( stop() , silent = TRUE )
+
+	# test whether the timeout time has elapsed AND
+	# whether the connection is still an error..
+	while( ( difftime( Sys.time() , start.timer , units = 'secs' ) < timeout ) & class( con.success )[1] == 'try-error' ){
+
+		# try to connect
+		con.success <-
+			try(
+				# don't generate a giant list of warnings
+				toss <-
+					suppressWarnings({
+						capture.output({
+							# connect the normal way, but with a single second timeout..
+							# but now, if the server opens *after* this line runs the first time, it runs again!
+							con <- socketConnection(host = host, port = port, blocking = TRUE, open="r+b",timeout = 1 ) 
+							.monetConnect(con,dbname,user,password)
+						})
+					} ) ,
+				silent = TRUE
+			)
+		
+	}
+
+	# if the timeout was reached and it's still a 'try-error', then break
+	if( class( con.success )[1] == 'try-error' ) stop( "connection timed out.  are you sure mserver is running?" )
+	
+	# now that R knows the mserver is running properly, close and re-open the socket, using the correct timeout time
+	close( con )
+	con <- socketConnection(host = host, port = port, blocking = TRUE, open="r+b",timeout = timeout ) 
 	.monetConnect(con,dbname,user,password)
+
 	
 	lockenv <- new.env(parent=emptyenv())
 	lockenv$lock <- 0
@@ -601,7 +636,7 @@ REPLY_SIZE    <- 100 # Apparently, -1 means unlimited, but we will start with a 
 		}
 	
 		if (typeKey == Q_TRANSACTION) {
-			print("Handling Q_TRANSACTION is NOT IMPLEMENTED YET")
+			stop("Handling Q_TRANSACTION is NOT IMPLEMENTED YET")
 		}
 		
 	}
@@ -691,6 +726,11 @@ REPLY_SIZE    <- 100 # Apparently, -1 means unlimited, but we will start with a 
 		.mapiWrite(con, paste0("Xreply_size ",REPLY_SIZE))
 		resp <- .mapiRead(con)
 	}
+}
+
+.hasColFunc <- function(conn,func) {
+	r <- dbSendQuery(conn,paste0("SELECT ",func,"(1);"))
+	r@env$success
 }
 
 # copied from RMonetDB, no java-specific things in here...

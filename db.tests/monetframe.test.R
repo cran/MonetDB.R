@@ -4,6 +4,10 @@ con <- dbConnect(dbDriver("MonetDB"), "monetdb://localhost:50000/acs", "monetdb"
 
 table <- "monetframetest"
 
+fcmp <- function(f1,f2,epsilon) {
+	abs(f1-f2) < epsilon
+}
+
 # basic MAPI/SQL test
 stopifnot(identical(dbGetQuery(con,"SELECT 'DPFKG!'")[[1]],"DPFKG!"))
 
@@ -48,6 +52,18 @@ stopifnot(identical(signif(plaindata$sepal_length*1000,2),as.vector(signif(frame
 
 # subset
 #stopifnot(identical(subset(plaindata,sepal_width > 3 & species == "setosa"),subset(frame,sepal_width > 3 & species == "setosa")))
+
+# moar ops
+stopifnot(fcmp(
+	sd(plaindata$sepal_width),
+	sd(frame$sepal_width)
+,0.1))
+
+stopifnot(fcmp(
+	var(plaindata$sepal_width),
+	var(frame$sepal_width)
+,0.1))
+
 
 dbDisconnect(con)
 print("SUCCESS")

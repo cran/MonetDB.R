@@ -1,9 +1,13 @@
 \name{as.data.frame}
 \alias{as.data.frame}
 \alias{as.data.frame.monet.frame}
+\alias{adf.monet.frame}
+\alias{adf}
+
 \alias{as.vector}
 \alias{as.vector.monet.frame}
-
+\alias{av.monet.frame}
+\alias{av}
 
 \title{
   Convert \code{monet.frame} into \code{data.frame}.
