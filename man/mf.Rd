@@ -8,7 +8,8 @@
   \code{mf} provides a short way of connecting to a MonetDB database and then constructs a \code{monet.frame} object for the given table or query.
 }
 \usage{
- 	mf (database,table,host="localhost",port=50000,user="monetdb",pass="monetdb",debug=FALSE,timeout=100) 
+ 	mf (database,table,host="localhost",port=50000,user="monetdb",
+    pass="monetdb",debug=FALSE,timeout=100) 
 
 }
 \arguments{

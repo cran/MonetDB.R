@@ -37,7 +37,7 @@ S3method(head,monet.frame)
 S3method(tail,monet.frame)
 S3method("[",monet.frame)
 S3method("$",monet.frame)
-#S3method(subset,monet.frame) # subset disabled for now, needs more work and is not ready yet
+S3method(subset,monet.frame)
 S3method(na.omit,monet.frame)
 S3method(sample, monet.frame)
 S3method(sample, default)
@@ -59,6 +59,13 @@ S3method(quantile,monet.frame)
 S3method(median,monet.frame)
 S3method(aggregate,monet.frame)
 export(aggregatef) # temp!
+
+export(tabulate)
+S3method(tabulate, monet.frame)
+S3method(tabulate, default)
+
+S3method(unique, monet.frame)
+S3method(range, monet.frame)
 
 # reorganization
 S3method(rbind,monet.frame)

@@ -49,6 +49,7 @@
          \item \code{\link[=head]{tail}} -- Gets the last n rows from the wrapped query result or table as \code{data.frame}
          \item \code{\link[=Extract]{[}} -- Extracts specific rows and columns from the wrapped object, behaves like \code{[} on \code{data.frame}
          \item \code{\link[=Extract]{$}} -- Extracts a single column from the wrapped object, behaves like \code{$} on \code{data.frame}
+         \item \code{\link[base]{subset}} -- Returns a subset of the wrapped table that meets filter conditions
          \item \code{\link[=na.fail]{na.omit}} -- Filters out NA/NULL values (only for single columns)
          \item \code{\link[MonetDB.R]{sample}} -- Gets n randomly selected rows of the wrapped query result or table as \code{data.frame}
           
@@ -71,6 +72,9 @@
          \item \code{\link[=cbind]{rbind}} -- Combines \code{monet.frame} objects of compatible structure through concatenation
          \item \code{\link[base]{merge}} -- Merge two \code{monet.frame} objects together using a DB JOIN operation
          \item \code{\link[base]{sort}} -- Sort a database column ascending or descending (only for single columns)
+         \item \code{\link[base]{tabulate}} -- Counts the number of value occurences (only for single numerical columns)
+         \item \code{\link[base]{range}} -- Gives range of values (only for single numerical columns)
+    
        }
 }
 \seealso{

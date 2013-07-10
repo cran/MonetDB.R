@@ -50,8 +50,13 @@ stopifnot(identical(round(mean(plaindata$sepal_length),2),round(mean(frame$sepal
 # Math
 stopifnot(identical(signif(plaindata$sepal_length*1000,2),as.vector(signif(frame$sepal_length * 1000,2))))
 
+
 # subset
-#stopifnot(identical(subset(plaindata,sepal_width > 3 & species == "setosa"),subset(frame,sepal_width > 3 & species == "setosa")))
+# have to realign row numbers for compat.
+sdf <- subset(plaindata,sepal_width > 3 & species == "setosa")
+rownames(sdf) <- 1:nrow(sdf)
+smf <- as.data.frame(subset(frame,sepal_width > 3 & species == "setosa"))
+stopifnot(identical(sdf,smf))
 
 # moar ops
 stopifnot(fcmp(

@@ -1,3 +1,19 @@
+0.7
+- some cran compatibility changes
+
+0.6.4
+- tabulate() support
+- unique() support
+- bugfix in subset()
+
+0.6.3
+- Quieter startup
+- dbSendQuery() now fails if the query is bogus
+- implemented dbGetException()
+
+0.6.2
+- subset() is back!
+
 0.6
 - merge() support from Anthony
 - CRAN cleanup

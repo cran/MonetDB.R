@@ -15,7 +15,8 @@ This function will return the process id of the database server, which in turn c
 \code{monetdb.server.stop} to stop the database server again. 
 }
 \usage{
-monetdb.server.setup(database.directory,monetdb.program.path, dbname = "demo", dbport = 50000)
+monetdb.server.setup(database.directory,monetdb.program.path, 
+	dbname = "demo", dbport = 50000)
 monetdb.server.start(bat.file)
 monetdb.server.stop(correct.pid)
 }

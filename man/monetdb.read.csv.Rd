@@ -9,7 +9,8 @@
   Instruct MonetDB to read a CSV file, optionally also create the table for it.
 }
 \usage{
-   monetdb.read.csv (conn, files, tablename, nrows, header=TRUE, locked=FALSE, na.strings="", ..., nrow.check=500)
+   monetdb.read.csv (conn, files, tablename, nrows, header=TRUE, 
+  locked=FALSE, na.strings="", ..., nrow.check=500, delim=",")
 }
 \arguments{
   \item{conn}{A MonetDB.R database connection. Created using \code{\link[DBI]{dbConnect}} with the 
@@ -24,6 +25,7 @@
    \item{...}{Additional parameters. Currently not in use.}
    \item{nrow.check}{Amount of rows that should be read from the CSV when the 
    table is being created to determine column types.}
+   \item{delim}{Field separator in CSV file.}
  }
  
 \value{

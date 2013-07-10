@@ -1,10 +1,7 @@
 library(MonetDB.R)
 library(sqlsurvey)
 
-monet.url <-  "monetdb://localhost:50000/acs"
-
-drv <- dbDriver("MonetDB")
-db <- dbConnect( drv , monet.url , "monetdb", "monetdb")
+db <- dbConnect( MonetDB.R() , "monetdb://localhost/acs")
 
 data( api )
 
@@ -24,8 +21,8 @@ dclus1 <-
 				# fpc = 'fpc' ,
 				table.name = 'apiclus1' ,
 				key = "idkey" ,
-				database = monet.url ,
-				driver = drv ,
+				database = "monetdb://localhost/acs" ,
+				driver = MonetDB.R() ,
 				user = "monetdb" ,
 				password = "monetdb" 
 		)

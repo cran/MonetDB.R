@@ -62,12 +62,12 @@ svymean.svyrepmonet<-function(x, design,na.rm=TRUE,  ...){
 test <- function(table,csv) {
 	print(table)
 
-#	print("sqlsurvey")
-#	alacs<-sqlrepsurvey("pwgtp",paste("pwgtp",1:80,sep=""),scale=4/80,rscales=rep(1,80), mse=TRUE,database="monetdb://localhost/acs", driver=monetdriver,key="idkey", user="monetdb",password="monetdb",table.name=table,check.factors=NULL)
-#	print("time")
-#	print(system.time(svymean(~agep, alacs, se=TRUE)))
-#	print("traffic")
-#	print(monetdbGetTransferredBytes())
+	print("sqlsurvey")
+	alacs<-sqlrepsurvey("pwgtp",paste("pwgtp",1:80,sep=""),scale=4/80,rscales=rep(1,80), mse=TRUE,database="monetdb://localhost/acs", driver=monetdriver,key="idkey", user="monetdb",password="monetdb",table.name=table,check.factors=NULL)
+	print("time")
+	print(system.time(svymean(~agep, alacs, se=TRUE)))
+	print("traffic")
+	print(monetdbGetTransferredBytes())
 
 	print("monet.frame")
 	almf<-monet.frame(dbConnect(MonetDB.R(),"monetdb://localhost/acs"), table)
@@ -78,17 +78,17 @@ test <- function(table,csv) {
 	print("traffic")
 	print(monetdbGetTransferredBytes())
 
-#	print("read.table")
-#	print(system.time(alabama<-read.table(csv,header=TRUE,sep=",")))
-#	names(alabama) <- tolower(names(alabama))
-#	svyal<-svrepdesign(weights=~pwgtp,repweights="pwgtp[1-9]+", mse=TRUE, scale=1,rscales=rep(4/80,80), data=alabama)
-#	print("time")
-#	print(system.time(svymean(~agep,svyal)))
+	print("read.table")
+	print(system.time(alabama<-read.table(csv,header=TRUE,sep=",")))
+	names(alabama) <- tolower(names(alabama))
+	svyal<-svrepdesign(weights=~pwgtp,repweights="pwgtp[1-9]+", mse=TRUE, scale=1,rscales=rep(4/80,80), data=alabama)
+	print("time")
+	print(system.time(svymean(~agep,svyal)))
 }
 
 
-test("alabama","/export/scratch2/hannes/acsdata/ss10pal.csv")
-test("california","/export/scratch2/hannes/acsdata/california.csv")
-test("acs3yr","/export/scratch2/hannes/acsdata/ss10.all.csv")
+test("alabama","/Users/hannes/Documents/eclipse-ws/MonetDB.R/db.tests/experiments/alabama.csv")
+#test("california","/export/scratch2/hannes/acsdata/california.csv")
+#test("acs3yr","/export/scratch2/hannes/acsdata/ss10.all.csv")
 
 

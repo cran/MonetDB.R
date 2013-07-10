@@ -46,6 +46,7 @@ monet.frame.internal <- function(conn,tableOrQuery,debug=FALSE,rtypes.hint=NA,cn
 		attr(obj,"cnames") <- res$column
 		attr(obj,"ncol") <- length(res$column)
 		attr(obj,"rtypes") <- lapply(res$type,monetdbRtype)
+		
 		if (debug) cat(paste0("II: 'Re-Initializing column info.'\n",sep=""))	
 		
 	}
@@ -623,15 +624,13 @@ length.monet.frame <- function(x) {
 	ncol(x)
 }
 
-# TODO: fix issue with constant values, subset(x,foo > "bar")
-
 # http://stat.ethz.ch/R-manual/R-patched/library/base/html/subset.html
-subset.monet.frame<-function(x,ssdef,...){
+subset.monet.frame<-function(x,subset,...){
+	subset<-substitute(subset)
+	restr<-sqlexpr(subset,parent.frame())
 	query <- getQuery(x)
-	ssdef<-substitute(ssdef)
-	restr <- sqlexpr(ssdef)
 	if (length(grep(" WHERE ",query,ignore.case=TRUE)) > 0) {
-		nquery <- sub("WHERE (.*?) (GROUP|HAVING|ORDER|LIMIT|OFFSET|;)",paste0("WHERE \\1 AND ",restr," \\2"),query,ignore.case=TRUE)
+		nquery <- sub("WHERE (.*?) (GROUP|HAVING|ORDER|LIMIT|OFFSET|;|$)",paste0("WHERE \\1 AND ",restr," \\2"),query,ignore.case=TRUE)
 	}
 	else {
 		nquery <- sub("(GROUP|HAVING|ORDER[ ]+BY|LIMIT|OFFSET|;|$)",paste0(" WHERE ",restr," \\1"),query,ignore.case=TRUE)
@@ -821,11 +820,11 @@ mean.monet.frame <- avg.monet.frame <- function(x,...) {
 	adf(.col.func(x,"avg",aggregate=TRUE))[[1,1]]
 }
 
-.col.func <- function(x,func,extraarg="",aggregate=FALSE){
+.col.func <- function(x,func,extraarg="",aggregate=FALSE,rename=NA,num=TRUE){
 	if (ncol(x) != 1) 
 		stop(func, " only defined for one-column frames, consider using $ first.")
 	
-	if (attr(x,"rtypes")[[1]] != "numeric")
+	if (num && attr(x,"rtypes")[[1]] != "numeric")
 		stop(names(x), " is not a numerical column.")
 	
 	query <- getQuery(x)
@@ -834,7 +833,7 @@ mean.monet.frame <- avg.monet.frame <- function(x,...) {
 	conn <- attr(x,"conn")
 	nexpr <- NA
 	
-	if (func %in% c("min", "max", "sum","avg","abs","sign","sqrt","floor","ceiling","exp","log","cos","sin","tan","acos","asin","atan","cosh","sinh","tanh","stddev_pop","stddev","prod")) {
+	if (func %in% c("min", "max", "sum","avg","abs","sign","sqrt","floor","ceiling","exp","log","cos","sin","tan","acos","asin","atan","cosh","sinh","tanh","stddev_pop","stddev","prod","distinct")) {
 		nexpr <- paste0(toupper(func),"(",col,")")
 	}
 	if (func == "range") {
@@ -850,9 +849,16 @@ mean.monet.frame <- avg.monet.frame <- function(x,...) {
 		# so, let's adapt
 		nexpr <- paste0("ROUND(",col,",-1*LENGTH(",col,")+",extraarg,")")
 	}
+	
+	if (func == "cast") {
+		nexpr <- paste0("CAST(",col," as ",extraarg,")")
+	}
 		
 	if (is.na(nexpr)) 
 		stop(func, " not supported (yet). Sorry.")
+	
+	if (!is.na(rename)) 
+		nexpr <- paste0(nexpr," AS ",rename)
 	
 	# replace the thing between SELECT and WHERE with the new value and return new monet.frame
 	nquery <- sub("select (.*?) from",paste0("SELECT ",nexpr," FROM"),query,ignore.case=TRUE)
@@ -886,6 +892,59 @@ var.monet.frame <- function (x, y = NULL, na.rm = FALSE, use) {
 	if (!missing(y)) stop("y parameter not supported on var() for monet.frame objects")
 	if (na.rm) x <- .filter.na(x) 
 	mean((x-mean(x))^2)
+}
+
+is.vector.monet.frame <- function (x, mode = "any") { 
+	if (mode != "any") stop("Type checking not yet supported in is.vector()")
+	return(ncol(x) == 1)
+}
+
+range.monet.frame <- function (...,na.rm=FALSE) {
+	nargs = length(list(...))
+	if (nargs != 1) stop("Need a parameter of type monet.frame")
+	x <- list(...)[[1]]
+	if (ncol(x) != 1) 
+		stop("range() only defined for one-column frames, consider using $ first.")
+	c(min(x,na.rm),max(x,na.rm))
+}
+
+
+# whoa, this is a beast. but it works, so all is well...
+tabulate.default <- function (bin, nbins = max(1L, bin, na.rm = TRUE)) base::tabulate (bin, nbins) 
+tabulate <- function (bin, nbins = max(1L, bin, na.rm = TRUE)) UseMethod("tabulate")
+tabulate.monet.frame <- function (bin, nbins = max(bin)) {
+	if (ncol(bin) != 1) 
+		stop("tabulate() only defined for one-column frames, consider using $ first.")
+	
+	isNum <- rTypes(bin)[[1]] == "numeric"
+	if (!isNum)
+		stop("tabulate() is only defined for numeric columns.")
+	if (nbins > .Machine$integer.max) 
+		stop("attempt to make a table with >= 2^31 elements")
+	
+	nbins <- as.integer(nbins)
+	if (is.na(nbins)) 
+		stop("invalid value of 'nbins'")
+	
+	# TODO: be more specific in typing, so we can check for int/double cols
+	#if (!grepl("INT",dbTypes(bin)[[1]]))
+	bin <- .col.func(bin,"cast","integer",FALSE,"t1",FALSE)
+		
+	nquery <- paste0("SELECT t1,COUNT(t1) AS ct FROM (",getQuery(bin),") AS t WHERE t1 > 0 GROUP BY t1 ORDER BY t1 LIMIT ",nbins,";");
+	if (.is.debug(bin))
+		cat(paste0("EX: '",nquery,"'\n",sep=""))	
+
+	counts <- dbGetQuery(attr(bin,"conn"),nquery)	
+	indices <- data.frame(t1=seq(1,nbins))
+	d <- merge(indices,counts,all.x=T,by=c("t1"))$ct
+	d[is.na(d)] <- 0
+	return(d)
+}
+
+unique.monet.frame <- function (x, incomparables = FALSE, fromLast = FALSE, ...) {
+	if (ncol(x) != 1) 
+		stop("unique() only defined for one-column frames, consider using $ first.")
+	as.vector(.col.func(x,"distinct",num=FALSE,aggregate=TRUE))
 }
 
 # overwrite non-generic functions sd and var
@@ -1081,7 +1140,8 @@ Math.monet.frame <- function(x,digits=0,...) {
 }
 
 # 'borrowed' from sqlsurvey, translates a subset() argument to sqlish
-sqlexpr<-function(expr){
+
+sqlexpr<-function(expr,env=emptyenv()){
 	nms<-new.env(parent=emptyenv())
 	assign("%in%"," IN ", nms)
 	assign("&", " AND ", nms)
@@ -1090,10 +1150,25 @@ sqlexpr<-function(expr){
 	assign("!"," NOT ",nms)
 	assign("I","",nms)
 	assign("~","",nms)
+	assign("(","",nms)
 	out <-textConnection("str","w",local=TRUE)
 	inorder<-function(e){
 		if(length(e) ==1) {
-			cat(e, file=out)
+			nm <- deparse(e)
+			if (is.character(e))
+				cat("'",e,"'",file=out,sep="")
+			else if(exists(nm, env)) {
+				val <- get(nm,env)
+				if (is.numeric(val))
+					cat(val, file=out)
+				else if (is.character(val))
+					cat("'",val,"'",file=out,sep="")
+				else 
+					cat(e, file=out)
+			}
+			else {
+				cat(e, file=out)
+			}
 		} else if (e[[1]]==quote(is.na)){
 			cat("(",file=out)
 			inorder(e[[2]])
