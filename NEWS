@@ -1,3 +1,11 @@
+0.9.4
+- dbWriteTable overhaul (thanks, Anthony)
+- Fix for dbListTables for MonetDB versions after Jan2014
+
+0.9.3
+- Remove trailing slashes for monetdb.program.path parameter for monetdb.server.setup (Thanks, Anthony!)
+- fixed monetdbd.liststatus (Thanks, Bart)
+
 0.9.2
 - monetdb_queryinfo method to find out things about an arbitrary query cheaply
 - new options monetdb.sequential, monetdb.debug.query and monetdb.debug.mapi
@@ -8,7 +16,6 @@
 - fixed various TODO's in the code to get closer to 1.0 (exciting)
 - fixed a bug when the error identifier sent by MonetDB was non-numeric
 - IPv6 addresses in dbConnect() should now work (another long-standing TODO)
-- New monetdb.server.start code for Windows (Thanks, Anthony)
 
 0.9.1
 - dbGetInfo() now supported on MonetDBConnection (dplyr compatibility)
