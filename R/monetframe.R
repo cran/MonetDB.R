@@ -157,7 +157,7 @@ as.vector.monet.frame <- av <- function(x,...) {
 			# remove old limit/offset from query
 			# TODO: is this safe? UNION queries are particularly dangerous, again...
 			nquery <- gsub("limit[ ]+\\d+|offset[ ]+\\d+","",nquery,ignore.case=TRUE)
-			nquery <- sub(";? *$",paste0(" LIMIT ",limit," OFFSET ",offset),nquery,ignore.case=TRUE)
+			nquery <- sub(";? *$",paste0(" LIMIT ",.mapiLongInt(limit)," OFFSET ",.mapiLongInt(offset)),nquery,ignore.case=TRUE)
 			nrow.hint <- limit
 		}
 		else 
@@ -742,47 +742,51 @@ Ops.monet.frame <- function(e1,e2) {
 	}
 	
 	rtypes.hint <- c("numeric")
+	
+	leftNumBool <- leftBool || leftNum
+	rightNumBool <- rightBool || rightNum
+	
 		
 	# mapping of R operators to DB operators...booring		
 	if (.Generic %in% c("+", "-", "*", "/","<",">","<=",">=")) {
-		if (!leftNum || !rightNum)
-			stop(.Generic, " only supported for numeric arguments")
+		if (!leftNumBool || !rightNumBool)
+			stop(.Generic, " only supported for numeric or logical arguments")
 		nexpr <- paste0(left,.Generic,right)
 	}
 	if (.Generic == "^") {
-		if (!leftNum || !rightNum)
-			stop(.Generic, " only supported for numeric arguments")
+		if (!leftNumBool || !rightNumBool)
+			stop(.Generic, " only supported for numeric or logical arguments")
 		nexpr <- paste0("POWER(",left,",",right,")")
 	}
 	if (.Generic == "%%") {
-		if (!leftNum || !rightNum)
-			stop(.Generic, " only supported for numeric arguments")
+		if (!leftNumBool || !rightNumBool)
+			stop(.Generic, " only supported for numeric or logical arguments")
 		nexpr <- paste0(left,"%",right)
 	}
 	
 	if (.Generic == "%/%") {
-		if (!leftNum || !rightNum)
-			stop(.Generic, " only supported for numeric arguments")
+		if (!leftNumBool || !rightNumBool)
+			stop(.Generic, " only supported for numeric or logical arguments")
 		nexpr <- paste0(left,"%CAST(",right," AS BIGINT)")
 	}
 	
 	if (.Generic == "!") {
 		if (!leftBool)
-			stop(.Generic, " only supported for logical (boolean) arguments")
+			stop(.Generic, " only supported for logical arguments")
 		nexpr <- paste0("NOT(",left,")")
 		rtypes.hint <- c("logical")
 	}
 	
 	if (.Generic == "&") {
 		if (!leftBool || !rightBool)
-			stop(.Generic, " only supported for logical (boolean) arguments")
+			stop(.Generic, " only supported for logical arguments")
 		nexpr <- paste0(left," AND ",right)
 		rtypes.hint <- c("logical")
 	}
 	
 	if (.Generic == "|") {
 		if (!leftBool || !rightBool)
-			stop(.Generic, " only supported for logical (boolean) arguments")
+			stop(.Generic, " only supported for logical arguments")
 		nexpr <- paste0(left," OR ",right)
 		rtypes.hint <- c("logical")
 	}
@@ -824,8 +828,9 @@ mean.monet.frame <- avg.monet.frame <- function(x,...) {
 	if (ncol(x) != 1) 
 		stop(func, " only defined for one-column frames, consider using $ first.")
 	
-	if (num && attr(x,"rtypes")[[1]] != "numeric")
-		stop(names(x), " is not a numerical column.")
+	colNum <- attr(x,"rtypes")[[1]] %in% c("numeric","logical")
+	if (num && !colNum)
+		stop(names(x), " is not a numerical or logical column.")
 	
 	query <- getQuery(x)
 	col <- sub("(select )(.*?)( from.*)","\\2",query,ignore.case=TRUE)
@@ -916,7 +921,7 @@ tabulate.monet.frame <- function (bin, nbins = max(bin)) {
 	if (ncol(bin) != 1) 
 		stop("tabulate() only defined for one-column frames, consider using $ first.")
 	
-	isNum <- rTypes(bin)[[1]] == "numeric"
+	isNum <- rTypes(bin)[[1]] %in% c("numeric")
 	if (!isNum)
 		stop("tabulate() is only defined for numeric columns.")
 	if (nbins > .Machine$integer.max) 
@@ -971,14 +976,6 @@ sample.monet.frame <- function (x, size, replace = FALSE, prob = NULL){
 	as.data.frame(monet.frame.internal(attr(x,"conn"),nquery,.is.debug(x),nrow.hint=size,ncol.hint=ncol(x), cnames.hint=names(x), rtypes.hint=rTypes(x)))
 }
 
-# TODO: make this work for normal data.frames, aggregate.formula looks into parent.frame(), how can we simulate that?
-#aggregate.formula <- function (formula, data, FUN, ..., subset, na.action = na.omit) {
-#	if (class(data)[[1]] == "monet.frame") aggregate.monet.frame.formula(formula, data, FUN, ..., subset, na.action)
-#	else 
-#		eval.parent(quote(stats:::aggregate.formula(formula, data, FUN, ..., subset, na.action)),2)
-#}
-
-
 
 aggregatef <- function(formula, data, FUN, ..., subset, na.action = na.omit){
 	if ( missing(formula) || !inherits(formula, "formula") ) stop("'formula' missing or incorrect")
@@ -1004,7 +1001,7 @@ aggregatef <- function(formula, data, FUN, ..., subset, na.action = na.omit){
 	if ( !all( lhs %in% names( data ) ) ) stop( lhs[ !( lhs %in% names( data ) ) ] , " not in the monet.frame" )
 	
 	projection <- c(lhs,rhs)
-	by <- as.list(lhs)
+	by <- as.list(rhs)
 	fname <- tolower(substitute(FUN))
 	
 	aggregate.monet.frame(data[,projection,drop=FALSE],by,fname,...,simplify=FALSE)
@@ -1036,8 +1033,8 @@ aggregate.monet.frame <- function(x, by, FUN, ..., simplify = TRUE) {
 	if (length(aggrcols) ==0)
 		stop("I need at least one column to aggregate.")
 	
-	if (!(all(aggrtypes=="numeric")) && fname != "count")
-		stop("Aggregated columns have all to be numeric.",)
+	if (!(all(aggrtypes %in% c("numeric","logical"))) && fname != "count")
+		stop("Aggregated columns have all to be numeric or logical.",)
 	
 	grouping <- paste0(paste0(by,"",collapse=", "))
 	projection <- paste0(grouping,", ",paste0(toupper(fname),"(",aggrcols,") AS ",fname,"_",aggrcols,collapse=", "))

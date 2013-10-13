@@ -1,3 +1,40 @@
+0.8
+- New All-C socket code (Thanks, Windows)
+- new dbConnect() parameter organization (!)
+- new mc() shorthand method for db connections
+
+0.7.10
+- More tip-toeing around in dbConnect()
+- More error-tolerant MAPI parsing
+
+0.7.9
+- Changes in dbConnect() error handling
+
+0.7.8
+- fix for [, large offsets are not translated to SQL correctly
+
+0.7.7
+- fix for aggregatef(), formula arguments were not evaluated in the right direction
+- support for mathematical operations on boolean columns
+
+0.7.6
+- fix for C implementation for line splitting
+
+0.7.5
+- more fetch() fixes
+
+0.7.4
+- string to line splitting to c, NA handling to C as well
+
+0.7.3
+- c implementation of very expensive function
+
+0.7.2
+- fetch() performance enhancements and bug fixes
+
+0.7.1
+- minor fixes to fetch() function from basic DBI
+
 0.7
 - some cran compatibility changes
 

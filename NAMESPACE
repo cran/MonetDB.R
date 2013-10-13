@@ -1,4 +1,4 @@
-import(DBI,utils,stats)
+import(DBI,utils,stats,digest,methods)
 
 # export only driver constructor, everything else is DBI stuff..
 export(MonetDB,MonetR,MonetDBR,MonetDB.R)
@@ -14,6 +14,8 @@ export(monet.frame)
 export(mf)
 export(set.debug)
 
+# shorthand for db connections
+export(mc)
 
 # conversion to native R
 S3method(as.list,monet.frame)
@@ -78,6 +80,7 @@ export(monetdb.server.start)
 export(monetdb.server.stop)
 
 
+useDynLib(MonetDB.R)
 
 
 

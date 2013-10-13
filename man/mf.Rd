@@ -34,4 +34,3 @@
 \dontrun{
 	frame <- mf("demo","iris")
 }}
-\keyword{interface}
