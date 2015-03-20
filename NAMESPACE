@@ -7,6 +7,7 @@ export(monet.read.csv,monetdb.read.csv)
 exportMethods(dbSendUpdate,dbSendUpdateAsync,dbTransaction)
 # shorthands
 export(mc,mq)
+useDynLib(MonetDB.R)
 
 # control.R
 export(monetdb.server.setup)
@@ -14,7 +15,6 @@ export(monetdb.server.start)
 export(monetdb.server.stop)
 export(monetdbd.liststatus)
 export(monetdb.liststatus)
-useDynLib(MonetDB.R)
 
 # dplyr.R
 export(src_monetdb)
@@ -28,4 +28,6 @@ export(db_insert_into.MonetDBConnection)
 export(db_create_index.MonetDBConnection)
 export(db_analyze.MonetDBConnection)
 export(sql_subquery.MonetDBConnection)
-export(monetdb_queryinfo)
+export(monetdb_queryinfo) 
+export(sample_n.tbl_monetdb)
+export(sample_frac.tbl_monetdb)
