@@ -1,6 +1,6 @@
-1364ecfc17d09679c9fc700417f18021 *DESCRIPTION
+da69e311cfd3e0bb80c4cf156a3a86b2 *DESCRIPTION
 b4c32a82975791e7435a3a64e91a72a0 *NAMESPACE
-da0347fb6e2ada2976d1e8d2bca14b9b *NEWS
+a596d84b9597f003f803189f3a037edc *NEWS
 7399a913cbb36b92628a2da94ac3fff2 *R/control.R
 b5757bde46ee2b065c99b17d24b820ff *R/dbi.R
 9f02d499574cf0610c8de87f819c76ba *R/dplyr.R
@@ -16,6 +16,6 @@ b7a6df6db9f928ceac9ae2823b3406c4 *man/monetdb_queryinfo.Rd
 b338aa470266bdf7b26a99c2afbecf3e *man/monetdbd.liststatus.Rd
 5392b53e219a2fae51208f0255636f7b *man/mq.Rd
 b295f4593520db64d4977377d1d23fcb *man/src_monetdb.Rd
-7e636734e5121faa4653b371badb8c4c *src/mapisplit-r.c
+2a809518a2c97df03f829ee73f9dd02e *src/mapisplit-r.c
 230cc65fe56cbb442517f84871e28e98 *src/mapisplit.c
 aff635c66e95eb5a0e9e6368d9a4c4dc *src/mapisplit.h

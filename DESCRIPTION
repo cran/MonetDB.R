@@ -1,5 +1,5 @@
 Package: MonetDB.R
-Version: 0.9.6
+Version: 0.9.7
 Title: Connect MonetDB to R
 Authors@R: c(person("Hannes Muehleisen", role = c("aut", "cre"),email = "hannes@cwi.nl"),
 	person("Thomas Lumley", role = "ctb"),
@@ -12,7 +12,7 @@ Description: Allows to pull data from MonetDB into R. Includes a DBI implementat
 License: MPL (== 1.1)
 URL: http://monetr.r-forge.r-project.org
 SystemRequirements: MonetDB, available from http://www.monetdb.org
-Packaged: 2015-03-20 11:41:32 UTC; hannes
 NeedsCompilation: yes
+Packaged: 2015-03-29 10:58:18 UTC; hannes
 Repository: CRAN
-Date/Publication: 2015-03-20 14:22:47
+Date/Publication: 2015-03-29 13:50:31
