@@ -1,19 +1,25 @@
-src_monetdb <- function(dbname, host = "localhost", port = 50000L, user = "monetdb",
-  password = "monetdb", ...) {
+src_monetdb <- function(dbname="demo", host = "localhost", port = 50000L, user = "monetdb",
+  password = "monetdb", con = FALSE, ...) {
+  if (!inherits(con, "MonetDBConnection") || !dbIsValid(con)) {
+    con <- dbConnect(MonetDB.R(), dbname = dbname , host = host, port = port,
+      user = user, password = password, ...)
+  }
   requireNamespace("dplyr")
-  con <- dbConnect(MonetDB.R(), dbname = dbname , host = host, port = port,
-    user = user, password = password, ...)
   dplyr::src_sql("monetdb", con, info = dbGetInfo(con))
 }
 
 src_translate_env.src_monetdb <- function(x) {
   dplyr::sql_variant(
-    dplyr::base_scalar,
+    dplyr::sql_translator(.parent = dplyr::base_scalar,
+    `!=` = dplyr::sql_infix("<>")
+    ),
     dplyr::sql_translator(.parent = dplyr::base_agg,
       n = function() dplyr::sql("COUNT(*)"),
       sd =  dplyr::sql_prefix("STDDEV_SAMP"),
       var = dplyr::sql_prefix("VAR_SAMP"),
-      median = dplyr::sql_prefix("MEDIAN")
+      median = dplyr::sql_prefix("MEDIAN"),
+      n_distinct = function(x) {dplyr::build_sql(dplyr::sql("count(distinct "), 
+        x, dplyr::sql(")"))}
     )
   )
 }
@@ -51,8 +57,16 @@ db_query_fields.MonetDBConnection <- function(con, sql, ...) {
   dbGetQuery(con, dplyr::build_sql("PREPARE SELECT * FROM ", sql))$column
 }
 
+db_query_fields.MonetDBEmbeddedConnection <- function(con, sql, ...) {
+  names(dbGetQuery(con, dplyr::build_sql("SELECT * FROM ", sql), notreally=T))
+}
+
 db_query_rows.MonetDBConnection <- function(con, sql, ...) {
   monetdb_queryinfo(con,sql)$rows
+}
+
+db_query_rows.MonetDBEmbeddedConnection <- function(con, sql, ...) {
+  attr(dbGetQuery(con, sql, notreally=T), "__rows")
 }
 
 db_insert_into.MonetDBConnection <- function(con, table, values, ...) {
@@ -63,7 +77,7 @@ db_insert_into.MonetDBConnection <- function(con, table, values, ...) {
 db_save_query.MonetDBConnection <- function(con, sql, name, temporary = TRUE,
                                             ...) {
   tt_sql <- dplyr::build_sql("CREATE TEMPORARY TABLE ", dplyr::ident(name), " AS ",
-    sql, " WITH DATA", con = con)
+    sql, " WITH DATA ON COMMIT PRESERVE ROWS", con = con)
   dbGetQuery(con, tt_sql)
   name
 }

@@ -5,7 +5,7 @@ monetdb.server.start <-
       if( !file.exists( bat.file ) ) stop( paste( bat.file , "does not exist. Run monetdb.server.setup() to create a batch file." ) )
       
       # uugly, find path of pid file again by parsing shell script.
-      sc <- read.table(bat.file,sep="\n",stringsAsFactors=F)
+      sc <- utils::read.table(bat.file,sep="\n",stringsAsFactors=F)
       pidfile <- substring(sc[[2,1]],11)
       
       # run script
@@ -67,40 +67,28 @@ monetdb.server.start <-
     
   }
 
-
-monetdb.server.stop <-
-  function( correct.pid, wait=TRUE ){
-    
-    if ( .Platform$OS.type == "unix" ) {
-      system(paste0("kill ",correct.pid))  
-      waittime <- 2
-      if (!wait) return(TRUE)
-      Sys.sleep(.5)
-      repeat {
-        psout <- system(paste0("ps ax | grep \"^", correct.pid, ".*mserver5\""), ignore.stdout=T) 
-        if (psout != 0) break
-        message("Waiting ",waittime,"s for server shutdown (ESC or CTRL+C to abort)")
-        Sys.sleep(waittime)
-        waittime <- waittime * 2
-      }
-    } 
-    
-    if ( .Platform$OS.type == "windows" ) {
-      
-      # write the taskkill command line
-      taskkill.cmd <- 
-        paste( 
-          "taskkill" , 
-          "/PID" , 
-          correct.pid ,
-          "/F"
-        )
-      
-      # kill the same process that was loaded
-      system( taskkill.cmd )
-      
-    }
+# oh the humanity
+monetdb.server.stop <- function(correct.pid, wait=TRUE ){
+  correct.pid <- as.integer(correct.pid)
+  if (.Platform$OS.type == "windows")
+    system(paste0("taskkill /F /PID ", correct.pid))
+  else
+    system(paste0("kill ", correct.pid))
+  waittime <- 2
+  if (!wait) return(TRUE)
+  Sys.sleep(.5)
+  repeat {
+    stillrunning <- F
+    if (.Platform$OS.type == "windows")
+      stillrunning <- grepl("mserver5", system2('tasklist', c('/FI "PID eq ', correct.pid, '" /FO CSV'), stdout=T)[2])
+    else
+      stillrunning <- system(paste0("ps ax | grep \"^", correct.pid, ".*mserver5\""), ignore.stdout=T) == 0
+    if (!stillrunning) break
+    message("Waiting ", waittime, "s for server shutdown (ESC or CTRL+C to abort)")
+    Sys.sleep(waittime)
+    waittime <- waittime * 2
   }
+}
 
 monetdb.server.setup <-
   function( 
