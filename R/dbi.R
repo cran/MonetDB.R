@@ -2,7 +2,7 @@
 C_LIBRARY <- "MonetDB.R"
 
 # Make S4 aware of S3 classes
-setOldClass(c("sockconn", "connection", "monetdb_mapi_conn"))
+# setOldClass(c("sockconn", "connection"))
 
 ### MonetDBDriver
 setClass("MonetDBDriver", representation("DBIDriver"))
@@ -21,7 +21,7 @@ setMethod("dbGetInfo", "MonetDBDriver", def=function(dbObj, ...)
   list(name="MonetDBDriver", 
        driver.version=utils::packageVersion("MonetDB.R"), 
        DBI.version=utils::packageVersion("DBI"), 
-       client.version="NA", 
+       client.version=NA, 
        max.connections=125) # R can only handle 128 connections, three of which are pre-allocated
 )
 
@@ -94,10 +94,11 @@ setMethod("dbConnect", "MonetDBDriver", def=function(drv, dbname="demo", user="m
   }
 
   if (embedded != FALSE) {
-    if (!require("MonetDBLite", character.only=T)) {
+    if (!requireNamespace("MonetDBLite", quietly=T)) {
       stop("MonetDBLite package required for embedded mode")
     }
-    MonetDBLite::monetdb_embedded_startup(embedded, !getOption("monetdb.debug.embedded", FALSE))
+    MonetDBLite::monetdb_embedded_startup(embedded, !getOption("monetdb.debug.embedded", FALSE), 
+      getOption("monetdb.sequential", TRUE))
     connenv <- new.env(parent=emptyenv())
     connenv$conn <- MonetDBLite::monetdb_embedded_connect()
     connenv$open <- TRUE
@@ -163,6 +164,11 @@ setMethod("dbGetInfo", "MonetDBConnection", def=function(dbObj, ...) {
   ll <- as.list(envdata$value)
   names(ll) <- envdata$name
   ll$name <- "MonetDBConnection"
+  ll$db.version <- NA
+  ll$dbname <- ll$gdk_dbname
+  ll$username <- NA
+  ll$host <- NA
+  ll$port <- NA
   ll
 })
 
@@ -175,9 +181,11 @@ setMethod("dbDisconnect", "MonetDBConnection", def=function(conn, ...) {
   invisible(TRUE)
 })
 
-setMethod("dbDisconnect", "MonetDBEmbeddedConnection", def=function(conn, ...) {
+setMethod("dbDisconnect", "MonetDBEmbeddedConnection", def=function(conn, shutdown=FALSE, ...) {
+  if (!conn@connenv$open) warning("already disconnected")
   conn@connenv$open <- FALSE
   MonetDBLite::monetdb_embedded_disconnect(conn@connenv$conn)
+  if (shutdown) MonetDBLite::monetdb_embedded_shutdown()
   invisible(TRUE)
 })
 
@@ -218,7 +226,7 @@ setMethod("dbRollback", "MonetDBConnection", def=function(conn, ...) {
   invisible(TRUE)
 })
 
-setMethod("dbListFields", "MonetDBConnection", def=function(conn, name, ...) {
+setMethod("dbListFields", signature(conn="MonetDBConnection", name = "character"), def=function(conn, name, ...) {
   if (!dbExistsTable(conn, name))
     stop(paste0("Unknown table: ", name));
   df <- dbGetQuery(conn, paste0("select columns.name as name from sys.columns join sys.tables on \
@@ -226,7 +234,7 @@ setMethod("dbListFields", "MonetDBConnection", def=function(conn, name, ...) {
   df$name
 })
 
-setMethod("dbExistsTable", "MonetDBConnection", def=function(conn, name, ...) {
+setMethod("dbExistsTable", signature(conn="MonetDBConnection", name = "character"), def=function(conn, name, ...) {
   name <- quoteIfNeeded(conn, name)
   return(as.character(name) %in% 
     dbListTables(conn, sys_tables=T))
@@ -236,7 +244,7 @@ setMethod("dbGetException", "MonetDBConnection", def=function(conn, ...) {
   conn@connenv$exception
 })
 
-setMethod("dbReadTable", "MonetDBConnection", def=function(conn, name, ...) {
+setMethod("dbReadTable", signature(conn="MonetDBConnection", name = "character"), def=function(conn, name, ...) {
   name <- quoteIfNeeded(conn, name)
   if (!dbExistsTable(conn, name))
     stop(paste0("Unknown table: ", name));
@@ -253,9 +261,8 @@ setMethod("dbSendQuery", signature(conn="MonetDBConnection", statement="characte
   conn@connenv$exception <- list()
   env <- NULL
   if (getOption("monetdb.debug.query", F))  message("QQ: '", statement, "'")
-  # make the progress bar wait for querylog.define
-  # if (getOption("monetdb.profile", T))  .profiler_arm()
-
+  if(!is.null(log_file <- getOption("monetdb.log.query", NULL)))
+    cat(c(statement, ";\n"), file = log_file, sep="", append = TRUE)
   # the actual request
   resp <- NA
   tryCatch({
@@ -325,7 +332,7 @@ setMethod("dbSendQuery", signature(conn="MonetDBConnection", statement="characte
 
 # This one does all the work in this class
 setMethod("dbSendQuery", signature(conn="MonetDBEmbeddedConnection", statement="character"),  
-          def=function(conn, statement, ..., list=NULL, notreally=F) {   
+          def=function(conn, statement, ..., list=NULL, execute = T, resultconvert = T) {   
   if (!conn@connenv$open) {
     stop("This connection was closed.")
   }
@@ -335,9 +342,11 @@ setMethod("dbSendQuery", signature(conn="MonetDBEmbeddedConnection", statement="
   } 
   env <- NULL
   if (getOption("monetdb.debug.query", F)) message("QQ: '", statement, "'")
-
-  resp <- MonetDBLite::monetdb_embedded_query(conn@connenv$conn, statement, notreally)
-
+  if(!is.null(log_file <- getOption("monetdb.log.query", NULL)))
+    cat(c(statement, ";\n"), file = log_file, sep="", append = TRUE)
+  startt <- Sys.time()
+  resp <- MonetDBLite::monetdb_embedded_query(conn@connenv$conn, statement, execute, resultconvert)
+  takent <- round(as.numeric(Sys.time() - startt), 2)
   env <- new.env(parent=emptyenv())
   if (resp$type == Q_TABLE) {
     meta <- new.env(parent=emptyenv())
@@ -387,6 +396,7 @@ setMethod("dbSendQuery", signature(conn="MonetDBEmbeddedConnection", statement="
       stop("Unable to execute statement '", statement, "'.\nServer says '", env$message, "'.")
     }
   }
+  if (getOption("monetdb.debug.query", F)) message("II: Finished in ", takent, "s")
 
   invisible(new("MonetDBEmbeddedResult", env=env))
   })
@@ -431,6 +441,7 @@ reserved_monetdb_keywords <- sort(unique(toupper(c(.SQL92Keywords,
 
 # quoting
 quoteIfNeeded <- function(conn, x, warn=T, ...) {
+  x <- as.character(x)
   chars <- !grepl("^[a-z_][a-z0-9_]*$", x, perl=T) & !grepl("^\"[^\"]*\"$", x, perl=T)
   if (any(chars) && warn) {
     message("Identifier(s) ", paste("\"", x[chars],"\"", collapse=", ", sep=""), " contain uppercase or reserved SQL characters and need(s) to be quoted in queries.")
@@ -446,15 +457,15 @@ quoteIfNeeded <- function(conn, x, warn=T, ...) {
   x
 }
 
-setMethod("dbWriteTable", "MonetDBConnection", def=function(conn, name, value, overwrite=FALSE, 
-  append=FALSE, csvdump=FALSE, transaction=TRUE,...) {
+setMethod("dbWriteTable", signature(conn="MonetDBConnection", name = "character", value="ANY"), def=function(conn, name, value, overwrite=FALSE, 
+  append=FALSE, csvdump=FALSE, transaction=TRUE, temporary=FALSE, ...) {
   if (is.character(value)) {
     message("Treating character vector parameter as file name(s) for monetdb.read.csv()")
     monetdb.read.csv(conn=conn, files=value, tablename=name, create=!append, ...)
     return(invisible(TRUE))
   }
   if (is.vector(value) && !is.list(value)) value <- data.frame(x=value, stringsAsFactors=F)
-  if (length(value)<1) stop("value must have at least one column")
+  if (length(value) < 1) stop("value must have at least one column")
   if (is.null(names(value))) names(value) <- paste("V", 1:length(value), sep='')
   if (length(value[[1]])>0) {
     if (!is.data.frame(value)) value <- as.data.frame(value, row.names=1:length(value[[1]]) , stringsAsFactors=F)
@@ -475,10 +486,15 @@ setMethod("dbWriteTable", "MonetDBConnection", def=function(conn, name, value, o
       to remove the existing table. Set append=TRUE if you would like to add the new data to the 
       existing table.")
   }
+  
   if (!dbExistsTable(conn, qname)) {
     fts <- sapply(value, dbDataType, dbObj=conn)
     fdef <- paste(quoteIfNeeded(conn, names(value)), fts, collapse=', ')
-    ct <- paste("CREATE TABLE ", qname, " (", fdef, ")", sep= '')
+    if (temporary) {
+      ct <- paste0("CREATE TEMPORARY TABLE ", qname, " (", fdef, ") ON COMMIT PRESERVE ROWS")
+    } else {
+      ct <- paste0("CREATE TABLE ", qname, " (", fdef, ")")
+    }
     dbSendUpdate(conn, ct)
   }
   if (length(value[[1]])) {
@@ -540,7 +556,7 @@ setMethod("dbDataType", signature(dbObj="MonetDBConnection", obj = "ANY"), def =
 }, valueClass = "character")
 
 
-setMethod("dbRemoveTable", "MonetDBConnection", def=function(conn, name, ...) {
+setMethod("dbRemoveTable", signature(conn="MonetDBConnection", name = "character"), def=function(conn, name, ...) {
   name <- quoteIfNeeded(conn, name)
   if (dbExistsTable(conn, name)) {
     dbSendUpdate(conn, paste("DROP TABLE", name))
@@ -644,7 +660,7 @@ monetdbRtype <- function(dbType) {
 
 setMethod("fetch", signature(res="MonetDBResult", n="numeric"), def=function(res, n, ...) {
   # DBI on CRAN still uses fetch()
-  # message("fetch() is deprecated, use dbFetch()")
+  # .Deprecated("dbFetch")
   dbFetch(res, n, ...)
 })
 
@@ -815,6 +831,24 @@ setMethod("dbHasCompleted", "MonetDBResult", def = function(res, ...) {
   return(invisible(TRUE))
 }, valueClass = "logical")
 
+# compatibility with RSQLite
+if (is.null(getGeneric("isIdCurrent"))) setGeneric("isIdCurrent", function(dbObj, ...) standardGeneric("isIdCurrent"))
+setMethod("isIdCurrent", signature(dbObj="MonetDBResult"), def=function(dbObj, ...) {
+  .Deprecated("dbIsValid")
+   dbIsValid(dbObj)
+})
+
+setMethod("isIdCurrent", signature(dbObj="MonetDBConnection"), def=function(dbObj, ...) {
+  .Deprecated("dbIsValid")
+   dbIsValid(dbObj)
+})
+
+if (is.null(getGeneric("initExtension"))) setGeneric("initExtension", function(dbObj, ...) standardGeneric("initExtension"))
+setMethod("initExtension", signature(dbObj="MonetDBConnection"), def=function(dbObj, ...) {
+  .Deprecated(msg="initExtension() is not required for MonetDBLite")
+})
+
+
 setMethod("dbIsValid", signature(dbObj="MonetDBResult"), def=function(dbObj, ...) {
   if (dbObj@env$info$type == Q_TABLE) {
     return(dbObj@env$open)
@@ -835,21 +869,31 @@ setMethod("dbColumnInfo", "MonetDBEmbeddedResult", def = function(res, ...) {
 }, 
 valueClass = "data.frame")
 
+setMethod("dbGetStatement", "MonetDBResult", def = function(res, ...) {
+  res@env$query
+}, 
+valueClass = "character")
 
-setMethod("dbGetInfo", "MonetDBResult", def=function(dbObj, ...) {
-  return(list(statement=dbObj@env$query, rows.affected=0, row.count=dbObj@env$info$rows, 
-              has.completed=dbHasCompleted(dbObj), is.select=TRUE))	
-}, valueClass="list")
+setMethod("dbGetRowCount", "MonetDBResult", def = function(res, ...) {
+  res@env$info$rows
+}, 
+valueClass = "numeric")
+
+setMethod("dbGetRowsAffected", "MonetDBResult", def = function(res, ...) {
+  as.numeric(NA)
+}, 
+valueClass = "numeric")
 
 # adapted from RMonetDB, no java-specific things in here...
 monet.read.csv <- monetdb.read.csv <- function(conn, files, tablename, header=TRUE, 
                                                locked=FALSE, best.effort=FALSE, na.strings="", nrow.check=500, 
                                                delim=",", newline="\\n", quote="\"", create=TRUE, 
-                                               col.names=NULL, lower.case.names=FALSE, ...){
+                                               col.names=NULL, lower.case.names=FALSE, sep=delim, ...){
   
   if (length(na.strings)>1) stop("na.strings must be of length 1")
-  headers <- lapply(files, utils::read.csv, sep=delim, na.strings=na.strings, quote=quote, nrows=nrow.check, header=header, ...)
+  if (!missing(sep)) delim <- sep
 
+  headers <- lapply(files, utils::read.csv, sep=delim, na.strings=na.strings, quote=quote, nrows=nrow.check, header=header, ...)
   if (length(files)>1){
     nn <- sapply(headers, ncol)
     if (!all(nn==nn[1])) stop("Files have different numbers of columns")
