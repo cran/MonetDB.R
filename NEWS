@@ -1,3 +1,5 @@
+1.0.2
+- reduced MAX_PACKET_SIZE to 8100, which seems to be a safe value to avoid sending unfinished packages to the MonetDB server.
 1.0.1
 - added isIdCurrent for improved compatibility with RSQLite
 - new option monetdb.log.query allows export of dbSendQuery statements to file
